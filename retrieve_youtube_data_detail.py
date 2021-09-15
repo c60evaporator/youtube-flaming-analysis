@@ -18,7 +18,10 @@ channel_info_list = []
 for i, channel_id in enumerate(CHANNEL_IDS):
     # チャンネルIDからチャンネル情報
     print(f'Channnel No.{i} start')
-    subscriber_and_viewer_dict = get_subscriber_viewer_count(channel_id, API_KEY)
+    if i <= 4:
+        subscriber_and_viewer_dict = get_subscriber_viewer_count_detail(channel_id, API_KEY, save_detail=True, save_detail_dir=SAVE_DETAIL_DIR)
+    else:
+        subscriber_and_viewer_dict = get_subscriber_viewer_count(channel_id, API_KEY)
     channel_info_list.append(subscriber_and_viewer_dict)
 df_channel_info = pd.DataFrame(channel_info_list)
 df_channel_info['start_date'] = start_date

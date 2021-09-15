@@ -73,7 +73,26 @@ def _get_date(str_date):
     sec = sec.split('.')[0]
     return datetime(int(year),int(month),int(date),int(hour),int(minute),int(sec))
 
-def get_subscriber_viewer_count(channel_id, api_key, save_detail=False, save_detail_dir=None):
+def get_subscriber_viewer_count(channel_id, api_key):
+    """チャンネルIDから動画の総再生数とチャンネル登録者数を取得"""
+    
+    # 取得した情報の保持用dict
+    subscriber_viewer_dict = {}
+    subscriber_viewer_dict['api_date'] = datetime.today()
+    subscriber_viewer_dict['channel_id'] = channel_id
+    
+    # チャンネルIDからチャンネル情報を取得
+    channel_detail = _get_channel_detail(channel_id, api_key)
+    subscriber_viewer_dict['channel_name'] = channel_detail['snippet']['title']  # チャンネル名
+    subscriber_viewer_dict['channel_publish_date'] = _get_date(channel_detail['snippet']['publishedAt'])  # チャンネル作成日
+    subscriber_viewer_dict['subscriber_count'] = int(channel_detail['statistics']['subscriberCount'])  # 登録者数
+    subscriber_viewer_dict['total_view_count'] = int(channel_detail['statistics']['viewCount'])  # 動画総再生数
+    subscriber_viewer_dict['video_count'] = int(channel_detail['statistics']['videoCount'])  # 動画数
+    print(f'video count = {subscriber_viewer_dict["video_count"]}')
+    
+    return subscriber_viewer_dict
+
+def get_subscriber_viewer_count_detail(channel_id, api_key, save_detail=False, save_detail_dir=None):
     """チャンネルIDから動画の総再生数とチャンネル登録者数を取得"""
     
     # 取得した情報の保持用dict
