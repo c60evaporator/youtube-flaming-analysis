@@ -1,15 +1,15 @@
 # YouTube情報の蓄積
 import pandas as pd
-from read_config import read_config
-from get_youtube_data import *
 import os
 import csv
 
-cfg, channel_ids = read_config()
+from read_config import read_config
+from get_youtube_data import *
 
+cfg, channel_ids = read_config()
 API_KEY = cfg['APIKeys']['YoutubeAPIKey']  # APIキー
 CHANNEL_IDS = channel_ids['channel_id'].values.tolist()  # インフルエンサーのチャンネルID
-CSV_PATH = f'{cfg["Path"]["CSVOutput"]}\\youtube_stats_summary.csv'
+CSV_PATH = f'{cfg["Path"]["NoxInfluencerOutput"]}\\youtube_status_history.csv'
 SAVE_DETAIL_DIR = f'{cfg["Path"]["DetailCSVOutput"]}'
 
 # チャンネル登録者数・再生数を取得
@@ -18,7 +18,7 @@ channel_info_list = []
 for i, channel_id in enumerate(CHANNEL_IDS):
     # チャンネルIDからチャンネル情報
     print(f'Channnel No.{i} start')
-    subscriber_and_viewer_dict = get_subscriber_viewer_count(channel_id, API_KEY)
+    subscriber_and_viewer_dict = get_subscriber_viewcount(channel_id, API_KEY)
     channel_info_list.append(subscriber_and_viewer_dict)
 df_channel_info = pd.DataFrame(channel_info_list)
 df_channel_info['start_date'] = start_date

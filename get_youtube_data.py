@@ -5,8 +5,8 @@ from datetime import datetime
 API_SERVICE_NAME = "youtube"
 API_VERSION = "v3"
 
-def _get_playlist_from_user(channel_id, api_key):
-    """ユーザIDからプレイリストIDを取得"""
+def get_playlist_from_user(channel_id, api_key):
+    """チャンネルIDからプレイリストIDを取得"""
     youtube = build(API_SERVICE_NAME, API_VERSION, developerKey=api_key)
     search_response = youtube.channels().list(
         part= 'snippet,contentDetails',
@@ -14,7 +14,8 @@ def _get_playlist_from_user(channel_id, api_key):
         ).execute()
     return search_response['items'][0]
 
-def _get_channel_detail(channel_id, api_key):
+def get_channel_detail(channel_id, api_key):
+    """チャンネルIDからチャンネル詳細情報を取得"""
     youtube = build(API_SERVICE_NAME, API_VERSION, developerKey=api_key)
     search_response = youtube.channels().list(
         part='snippet,statistics',
@@ -23,7 +24,7 @@ def _get_channel_detail(channel_id, api_key):
     print(f'Channel_name={search_response["items"][0]["snippet"]["title"]}')
     return search_response['items'][0]
 
-def _get_videos_from_playlist(playlist_id, apy_key):
+def get_videos_from_playlist(playlist_id, apy_key):
     """プレイリストIDから含まれる動画情報のリストを取得"""
     responses = []
     nextPageToken = 'start'
@@ -55,7 +56,7 @@ def _get_videos_from_playlist(playlist_id, apy_key):
     print('Load '+str(counts)+' videos...')
     return responses
 
-def _get_video_detail(video_id, api_key):
+def get_video_detail(video_id, api_key):
     """動画IDから動画情報詳細を取得"""
     youtube = build(API_SERVICE_NAME, API_VERSION, developerKey=api_key)
     search_response = youtube.videos().list(
@@ -65,7 +66,7 @@ def _get_video_detail(video_id, api_key):
     video_detail = search_response['items'][0]
     return video_detail
 
-def _get_date(str_date):
+def get_date(str_date):
     """日時文字列をdatetimeに変換(フォーマットが動画により変わるので注意)"""
     date_list = str_date.replace('Z','').split('T')
     year, month, date = date_list[0].split('-')
@@ -73,7 +74,7 @@ def _get_date(str_date):
     sec = sec.split('.')[0]
     return datetime(int(year),int(month),int(date),int(hour),int(minute),int(sec))
 
-def get_subscriber_viewer_count(channel_id, api_key):
+def get_subscriber_viewcount(channel_id, api_key):
     """チャンネルIDから動画の総再生数とチャンネル登録者数を取得"""
     
     # 取得した情報の保持用dict
@@ -82,9 +83,9 @@ def get_subscriber_viewer_count(channel_id, api_key):
     subscriber_viewer_dict['channel_id'] = channel_id
     
     # チャンネルIDからチャンネル情報を取得
-    channel_detail = _get_channel_detail(channel_id, api_key)
+    channel_detail = get_channel_detail(channel_id, api_key)
     subscriber_viewer_dict['channel_name'] = channel_detail['snippet']['title']  # チャンネル名
-    subscriber_viewer_dict['channel_publish_date'] = _get_date(channel_detail['snippet']['publishedAt'])  # チャンネル作成日
+    subscriber_viewer_dict['channel_publish_date'] = get_date(channel_detail['snippet']['publishedAt'])  # チャンネル作成日
     subscriber_viewer_dict['subscriber_count'] = int(channel_detail['statistics']['subscriberCount'])  # 登録者数
     subscriber_viewer_dict['total_view_count'] = int(channel_detail['statistics']['viewCount'])  # 動画総再生数
     subscriber_viewer_dict['video_count'] = int(channel_detail['statistics']['videoCount'])  # 動画数
@@ -92,7 +93,7 @@ def get_subscriber_viewer_count(channel_id, api_key):
     
     return subscriber_viewer_dict
 
-def get_subscriber_viewer_count_detail(channel_id, api_key, save_detail=False, save_detail_dir=None):
+def get_subscriber_viewcount_detail(channel_id, api_key, save_detail=False, save_detail_dir=None):
     """チャンネルIDから動画の総再生数とチャンネル登録者数を取得"""
     
     # 取得した情報の保持用dict
@@ -101,19 +102,19 @@ def get_subscriber_viewer_count_detail(channel_id, api_key, save_detail=False, s
     subscriber_viewer_dict['channel_id'] = channel_id
     
     # チャンネルIDからチャンネル情報を取得
-    channel_detail = _get_channel_detail(channel_id, api_key)
+    channel_detail = get_channel_detail(channel_id, api_key)
     subscriber_viewer_dict['channel_name'] = channel_detail['snippet']['title']  # チャンネル名
-    subscriber_viewer_dict['channel_publish_date'] = _get_date(channel_detail['snippet']['publishedAt'])  # チャンネル作成日
+    subscriber_viewer_dict['channel_publish_date'] = get_date(channel_detail['snippet']['publishedAt'])  # チャンネル作成日
     subscriber_viewer_dict['subscriber_count'] = int(channel_detail['statistics']['subscriberCount'])  # 登録者数
     subscriber_viewer_dict['total_view_count'] = int(channel_detail['statistics']['viewCount'])  # 動画総再生数
     subscriber_viewer_dict['video_count'] = int(channel_detail['statistics']['videoCount'])  # 動画数
 
     # チャンネルIDからプレイリストID取得
-    playlist_info = _get_playlist_from_user(channel_id, api_key)
+    playlist_info = get_playlist_from_user(channel_id, api_key)
     playlist_id = playlist_info['contentDetails']['relatedPlaylists']['uploads']
 
     # プレイリストIDから動画ID取得
-    videos_info = _get_videos_from_playlist(playlist_id, api_key)
+    videos_info = get_videos_from_playlist(playlist_id, api_key)
 
     # 動画IDから動画詳細を取得
     if save_detail:
@@ -122,10 +123,10 @@ def get_subscriber_viewer_count_detail(channel_id, api_key, save_detail=False, s
             video_id = video_info['snippet']['resourceId']['videoId']
             # 動画詳細情報を取得してdictに格納
             detail_dict = {}
-            video_detail = _get_video_detail(video_id, api_key)
+            video_detail = get_video_detail(video_id, api_key)
             detail_dict['video_id'] = video_id  # 動画作成日
             detail_dict['video_name'] = video_info['snippet']['title']  # 動画名
-            detail_dict['video_publish_date'] = _get_date(video_info['snippet']['publishedAt'])  # 動画作成日
+            detail_dict['video_publish_date'] = get_date(video_info['snippet']['publishedAt'])  # 動画作成日
             detail_dict['view_count'] = int(video_detail['statistics']['viewCount'])  # 再生数
             detail_dict['comment_count'] = int(video_detail['statistics']['commentCount'])  # コメント数
             # 取得した詳細情報をlistに追加
