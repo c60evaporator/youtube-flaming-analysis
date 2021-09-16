@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import csv
 import os
+from datetime import datetime
 
 from get_youtube_data import get_channel_detail
 from read_config import read_config
@@ -38,7 +39,7 @@ df_history = pd.merge(df_subscribers, df_viewcount[['date', 'total_view_count']]
 # チャンネルIDからチャンネル
 channel_id = URL_SUBSCRIBERS.split('trend/')[1].split('?')
 df_history['channel_name'] = get_channel_detail(channel_id, API_KEY)['snippet']['title']
-df_history['acquisition_date'] = get_channel_detail(channel_id, API_KEY)['snippet']['title']
+df_history['acquisition_date'] = datetime.today()
 
 # CSV出力（追記するため）
 #出力ファイル存在しないとき、新たに作成
