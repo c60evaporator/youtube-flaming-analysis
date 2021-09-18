@@ -79,8 +79,8 @@ def get_subscriber_viewcount(channel_id, api_key):
     
     # 取得した情報の保持用dict
     subscriber_viewer_dict = {}
-    subscriber_viewer_dict['api_date'] = datetime.today()
-    subscriber_viewer_dict['channel_id'] = channel_id
+    subscriber_viewer_dict['api_date'] = datetime.today()  # 取得日
+    subscriber_viewer_dict['channel_id'] = channel_id  # チャンネルID
     
     # チャンネルIDからチャンネル情報を取得
     channel_detail = get_channel_detail(channel_id, api_key)

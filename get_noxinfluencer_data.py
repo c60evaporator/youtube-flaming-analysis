@@ -32,16 +32,16 @@ def get_viewcount_history(url_viewcount):
     df_response = df_response.rename(columns={'value': 'total_view_count'})  # 列名変更
     return df_response
 
-
+# データを取得してPandasのDataFrameに格納してマージ
 df_subscribers = get_subscribers_history(URL_SUBSCRIBERS)
 df_viewcount = get_viewcount_history(URL_VIEWCOUNT)
 df_history = pd.merge(df_subscribers, df_viewcount[['date', 'total_view_count']], how='left', on='date')
-# チャンネルIDからチャンネル
+# URLから抜き出したチャンネルIDからチャンネル名を取得
 channel_id = URL_SUBSCRIBERS.split('trend/')[1].split('?')
 df_history['channel_name'] = get_channel_detail(channel_id, API_KEY)['snippet']['title']
 df_history['acquisition_date'] = datetime.today()
 
-# CSV出力（追記するため）
+# CSV出力（追記する場合の処理も記載）
 #出力ファイル存在しないとき、新たに作成
 if not os.path.exists(CSV_PATH):
     df_history.to_csv(CSV_PATH, encoding='utf_8_sig', index=False)

@@ -27,7 +27,7 @@ df_channel_info = pd.DataFrame(channel_info_list)
 df_channel_info['start_date'] = start_date
 df_channel_info['end_date'] = datetime.today()
 
-# CSV出力（追記するため）
+# CSV出力（追記する場合の処理も記載）
 #出力ファイル存在しないとき、新たに作成
 if not os.path.exists(CSV_PATH):
     df_channel_info.to_csv(CSV_PATH, encoding='utf_8_sig', index=False)

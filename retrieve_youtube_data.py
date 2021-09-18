@@ -8,9 +8,8 @@ from get_youtube_data import *
 
 cfg, channel_ids = read_config()
 API_KEY = cfg['APIKeys']['YoutubeAPIKey']  # APIキー
-CHANNEL_IDS = channel_ids['channel_id'].values.tolist()  # インフルエンサーのチャンネルID
-CSV_PATH = f'{cfg["Path"]["NoxInfluencerOutput"]}\\youtube_status_history.csv'
-SAVE_DETAIL_DIR = f'{cfg["Path"]["DetailCSVOutput"]}'
+CHANNEL_IDS = channel_ids['channel_id'].values.tolist()  # インフルエンサーのチャンネルIDのリスト
+CSV_PATH = f'{cfg["Path"]["NoxInfluencerOutput"]}\\youtube_status_history.csv'  # 出力先のパス
 
 # チャンネル登録者数・再生数を取得
 start_date = datetime.today()
@@ -24,7 +23,7 @@ df_channel_info = pd.DataFrame(channel_info_list)
 df_channel_info['start_date'] = start_date
 df_channel_info['end_date'] = datetime.today()
 
-# CSV出力（追記するため）
+# CSV出力（追記する場合の処理も記載）
 #出力ファイル存在しないとき、新たに作成
 if not os.path.exists(CSV_PATH):
     df_channel_info.to_csv(CSV_PATH, encoding='utf_8_sig', index=False)
