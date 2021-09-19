@@ -29,13 +29,13 @@ def get_viewcount_history(url_viewcount):
     response_dict = json.loads(response.text)
     df_response = pd.DataFrame(response_dict['retData']['history'])
     df_response['date'] = pd.to_datetime(df_response['date'])  # date列をdatetime型に変換
-    df_response = df_response.rename(columns={'value': 'total_view_count'})  # 列名変更
+    df_response = df_response.rename(columns={'value': 'view_count'})  # 列名変更
     return df_response
 
 # データを取得してPandasのDataFrameに格納してマージ
 df_subscribers = get_subscribers_history(URL_SUBSCRIBERS)
 df_viewcount = get_viewcount_history(URL_VIEWCOUNT)
-df_history = pd.merge(df_subscribers, df_viewcount[['date', 'total_view_count']], how='left', on='date')
+df_history = pd.merge(df_subscribers, df_viewcount[['date', 'view_count']], how='left', on='date')
 # URLから抜き出したチャンネルIDからチャンネル名を取得
 channel_id = URL_SUBSCRIBERS.split('trend/')[1].split('?')
 df_history['channel_name'] = get_channel_detail(channel_id, API_KEY)['snippet']['title']
