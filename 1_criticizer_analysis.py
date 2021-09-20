@@ -238,3 +238,84 @@ ax.axhline(y=0, color='gray', alpha=0.2)
 
 print(f'チャンネル登録者数増加率平均={np.mean(subscriber_increase_list)}%')
 print(f'再生回数数増加率平均={np.mean(view_increase_list)}%')
+
+# %% 自己相関コレログラム(http://www.mi.u-tokyo.ac.jp/consortium2/pdf/4-4_literacy_level_note.pdf)
+from statsmodels.graphics.tsaplots import plot_acf
+n_channels = df_criticizer['transferred_name'].nunique()
+fig, axes = plt.subplots(n_channels, 2, figsize=(12, n_channels*3))  # プロット用のaxes
+# チャンネルごとにループ
+for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
+    # 炎上前後データを抜き出し
+    df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
+                            before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
+    # 炎上前データの登録者数＆再生回数の自己相関コレログラム表示
+    plot_acf(df_before['subscriber_norm'], lags=31, ax=axes[i][0],
+             title=f'subscriber_{name}')
+    plot_acf(df_before['view_norm'], lags=31, ax=axes[i][1],
+             title=f'view_{name}')
+plt.tight_layout()
+
+# %% 差分の自己相関コレログラム（登録者数）
+from statsmodels.graphics.tsaplots import plot_acf
+n_channels = df_criticizer['transferred_name'].nunique()
+fig, axes = plt.subplots(n_channels * 2, 3, figsize=(18, n_channels*6))  # プロット用のaxes
+# チャンネルごとにループ
+for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
+    # 炎上前後データを抜き出し
+    df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
+                            before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
+    # 階差1のデータプロット
+    axes[i*2][0].plot(np.diff(df_before['subscriber_norm'].to_numpy()))
+    axes[i*2][0].set_title(f'1st_order_correlation_{name}')
+    # 階差1の自己相関コレログラム
+    plot_acf(np.diff(df_before['subscriber_norm'].to_numpy()),
+             lags=31, ax=axes[i*2+1][0],
+             title=f'1st_order_{name}')
+    # 階差2のデータプロット
+    axes[i*2][1].plot(np.diff(np.diff(df_before['subscriber_norm'].to_numpy())))
+    axes[i*2][1].set_title(f'2nd_order_correlation_{name}')
+    # 階差2の自己相関コレログラム
+    plot_acf(np.diff(np.diff(df_before['subscriber_norm'].to_numpy())),
+             lags=31, ax=axes[i*2+1][1],
+             title=f'2nd_order_{name}')
+    # 階差3のデータプロット
+    axes[i*2][2].plot(np.diff(np.diff(np.diff(df_before['subscriber_norm'].to_numpy()))))
+    axes[i*2][2].set_title(f'3rd_order_correlation_{name}')
+    # 階差3の自己相関コレログラム
+    plot_acf(np.diff(np.diff(np.diff(df_before['subscriber_norm'].to_numpy()))),
+             lags=31, ax=axes[i*2+1][2],
+             title=f'3rd_order_{name}')
+plt.tight_layout()
+
+# %% 差分の自己相関コレログラム（再生回数）
+from statsmodels.graphics.tsaplots import plot_acf
+n_channels = df_criticizer['transferred_name'].nunique()
+fig, axes = plt.subplots(n_channels * 2, 3, figsize=(18, n_channels*6))  # プロット用のaxes
+# チャンネルごとにループ
+for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
+    # 炎上前後データを抜き出し
+    df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
+                            before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
+    # 階差1のデータプロット
+    axes[i*2][0].plot(np.diff(df_before['view_norm'].to_numpy()))
+    axes[i*2][0].set_title(f'1st_order_correlation_{name}')
+    # 階差1の自己相関コレログラム
+    plot_acf(np.diff(df_before['view_norm'].to_numpy()),
+             lags=31, ax=axes[i*2+1][0],
+             title=f'1st_order_{name}')
+    # 階差2のデータプロット
+    axes[i*2][1].plot(np.diff(np.diff(df_before['view_norm'].to_numpy())))
+    axes[i*2][1].set_title(f'2nd_order_correlation_{name}')
+    # 階差2の自己相関コレログラム
+    plot_acf(np.diff(np.diff(df_before['view_norm'].to_numpy())),
+             lags=31, ax=axes[i*2+1][1],
+             title=f'2nd_order_{name}')
+    # 階差3のデータプロット
+    axes[i*2][2].plot(np.diff(np.diff(np.diff(df_before['view_norm'].to_numpy()))))
+    axes[i*2][2].set_title(f'3rd_order_correlation_{name}')
+    # 階差3の自己相関コレログラム
+    plot_acf(np.diff(np.diff(np.diff(df_before['view_norm'].to_numpy()))),
+             lags=31, ax=axes[i*2+1][2],
+             title=f'3rd_order_{name}')
+plt.tight_layout()
+# %%
