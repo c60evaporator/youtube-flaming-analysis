@@ -258,33 +258,41 @@ plt.tight_layout()
 # %% 差分の自己相関コレログラム（登録者数）
 from statsmodels.graphics.tsaplots import plot_acf
 n_channels = df_criticizer['transferred_name'].nunique()
+
+def plot_diff_acf(x, lags, axes_diff, axes_acf, name):
+    """差分の自己相関コレログラム描画用メソッド"""
+    # 階差1のデータプロット
+    axes_diff[0].plot(np.diff(x))
+    axes_diff[0].set_title(f'1st_order_correlation_{name}')
+    # 階差1の自己相関コレログラム
+    plot_acf(np.diff(x),
+             lags=lags, ax=axes_acf[0],
+             title=f'1st_order_{name}')
+    # 階差2のデータプロット
+    axes_diff[1].plot(np.diff(np.diff(x)))
+    axes_diff[1].set_title(f'2nd_order_correlation_{name}')
+    # 階差2の自己相関コレログラム
+    plot_acf(np.diff(np.diff(x)),
+             lags=lags, ax=axes_acf[1],
+             title=f'2nd_order_{name}')
+    # 階差3のデータプロット
+    axes_diff[2].plot(np.diff(np.diff(np.diff(x))))
+    axes_diff[2].set_title(f'3rd_order_correlation_{name}')
+    # 階差3の自己相関コレログラム
+    plot_acf(np.diff(np.diff(np.diff(x))),
+             lags=lags, ax=axes_acf[2],
+             title=f'3rd_order_{name}')
+
 fig, axes = plt.subplots(n_channels * 2, 3, figsize=(18, n_channels*6))  # プロット用のaxes
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
     # 炎上前後データを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
                             before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
-    # 階差1のデータプロット
-    axes[i*2][0].plot(np.diff(df_before['subscriber_norm'].to_numpy()))
-    axes[i*2][0].set_title(f'1st_order_correlation_{name}')
-    # 階差1の自己相関コレログラム
-    plot_acf(np.diff(df_before['subscriber_norm'].to_numpy()),
-             lags=31, ax=axes[i*2+1][0],
-             title=f'1st_order_{name}')
-    # 階差2のデータプロット
-    axes[i*2][1].plot(np.diff(np.diff(df_before['subscriber_norm'].to_numpy())))
-    axes[i*2][1].set_title(f'2nd_order_correlation_{name}')
-    # 階差2の自己相関コレログラム
-    plot_acf(np.diff(np.diff(df_before['subscriber_norm'].to_numpy())),
-             lags=31, ax=axes[i*2+1][1],
-             title=f'2nd_order_{name}')
-    # 階差3のデータプロット
-    axes[i*2][2].plot(np.diff(np.diff(np.diff(df_before['subscriber_norm'].to_numpy()))))
-    axes[i*2][2].set_title(f'3rd_order_correlation_{name}')
-    # 階差3の自己相関コレログラム
-    plot_acf(np.diff(np.diff(np.diff(df_before['subscriber_norm'].to_numpy()))),
-             lags=31, ax=axes[i*2+1][2],
-             title=f'3rd_order_{name}')
+    # 差分の自己相関コレログラム描画
+    plot_diff_acf(x=df_before['subscriber_norm'].to_numpy(), lags=31,
+                  axes_diff=axes[i*2], axes_acf=axes[i*2+1], name=name)
+
 plt.tight_layout()
 
 # %% 差分の自己相関コレログラム（再生回数）
@@ -296,26 +304,71 @@ for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
     # 炎上前後データを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
                             before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
-    # 階差1のデータプロット
-    axes[i*2][0].plot(np.diff(df_before['view_norm'].to_numpy()))
-    axes[i*2][0].set_title(f'1st_order_correlation_{name}')
-    # 階差1の自己相関コレログラム
-    plot_acf(np.diff(df_before['view_norm'].to_numpy()),
-             lags=31, ax=axes[i*2+1][0],
-             title=f'1st_order_{name}')
-    # 階差2のデータプロット
-    axes[i*2][1].plot(np.diff(np.diff(df_before['view_norm'].to_numpy())))
-    axes[i*2][1].set_title(f'2nd_order_correlation_{name}')
-    # 階差2の自己相関コレログラム
-    plot_acf(np.diff(np.diff(df_before['view_norm'].to_numpy())),
-             lags=31, ax=axes[i*2+1][1],
-             title=f'2nd_order_{name}')
-    # 階差3のデータプロット
-    axes[i*2][2].plot(np.diff(np.diff(np.diff(df_before['view_norm'].to_numpy()))))
-    axes[i*2][2].set_title(f'3rd_order_correlation_{name}')
-    # 階差3の自己相関コレログラム
-    plot_acf(np.diff(np.diff(np.diff(df_before['view_norm'].to_numpy()))),
-             lags=31, ax=axes[i*2+1][2],
-             title=f'3rd_order_{name}')
+    # 差分の自己相関コレログラム描画
+    plot_diff_acf(x=df_before['view_norm'].to_numpy(), lags=31,
+                  axes_diff=axes[i*2], axes_acf=axes[i*2+1], name=name)
+plt.tight_layout()
+
+# %% ARIMAモデルのp, qを推定し、モデル予測結果をプロット（登録者数）
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.stattools import arma_order_select_ic
+D = 2  # ARIMAモデルのパラメータd（階差の数）
+ALPHA = 0.05  # 区間予測の有意水準
+
+def optimize_arima_pq(x, d, p_max, q_max):
+    """ARIMAモデルのpとqを推定するメソッド"""
+    diff = x.copy()
+    for i in range(d):  # d回差分をとる
+        diff = diff.diff()
+    diff = diff.dropna()  # nanを削除
+    # ARMAのパラメータ推定
+    res = arma_order_select_ic(diff, ic='aic', trend='nc',
+                               max_ar=p_max, max_ma=q_max)
+    print(res['aic'])
+    print(f'best p={res["aic_min_order"][0]}, q={res["aic_min_order"][1]}')
+    return res['aic_min_order']
+
+def plot_arima_predict(x, order, predict_start, predict_end, ax, alpha=None):
+    """推定したパラメータでARIMAモデル作成し、予測結果をプロット"""
+    # ARIMAモデル作成
+    model = ARIMA(x, order=order)
+    res = model.fit()  # 学習
+    print(res.summary())
+    # モデルで将来予測
+    pred = res.get_prediction(start=predict_start,
+                                 end=predict_end,
+                                 dynamic=False)
+    pred_mean = pred.predicted_mean
+    pred_ci = pred.conf_int(alpha=alpha)
+    ax.plot(x, label='observed')
+    ax.plot(pred_mean, label='predict', c='green')
+    if alpha is not None:
+        ax.fill_between(pred_ci.index,
+                        pred_ci.iloc[:, 0],
+                        pred_ci.iloc[:, 1],
+                        color='green', alpha=0.2)
+
+fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロット用のaxes
+# チャンネルごとにループ
+for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
+    # 炎上前後データを抜き出し
+    df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
+                            before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
+    # 時間がindexのSeriesを作成
+    x_series = df_before[['subscriber_norm', 'date']]
+    x_series = x_series.set_index('date')['subscriber_norm']
+    # パラメータpとqの推定
+    best_p, best_q= optimize_arima_pq(x=x_series,
+                                      d=D, p_max=4, q_max=4)
+    # 推定したパラメータでARIMAモデル作成し、予測結果をプロット
+    plot_arima_predict(x=x_series, order=(best_p, D, best_q),
+                       predict_start=flaming_date, 
+                       predict_end=flaming_date + timedelta(days=AFTER_FLAMING-1),
+                       ax=axes[i], alpha=ALPHA)
+    # 実際の炎上後の推移をプロット
+    axes[i].plot(df_after['date'].values, df_after['subscriber_norm'].values,
+                 label='after flaming', c='red')
+    axes[i].legend(loc='upper left')
+    axes[i].set_title(f'subscriber_{name}')
 plt.tight_layout()
 # %%
