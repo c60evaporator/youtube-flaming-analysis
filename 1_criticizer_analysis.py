@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from datetime import timedelta
 color_list = list(colors.TABLEAU_COLORS.values())  # プロット用の色
+color_list.extend(list(colors.CSS4_COLORS.values()))
 
 # 炎上日
 flaming_date = df[df['transferred_name']=='influencer']['flaming_date'][0].to_pydatetime()
@@ -175,31 +176,36 @@ axes[1].set_ylim(0,)
 fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # プロット用のaxes
 subscriber_increase_list = []  # 登録者数増加率格納用
 view_increase_list = []  # 再生回数増加率格納用
+
+def plot_increase_scatter(x_before, x_after, y_before, y_after, label, ax):
+    """炎上前後の登録者数と再生回数の増加率を散布図プロット"""
+    # 炎上日から分析対象日数(AFTER_FLAMING)後までの登録者数の増加率
+    x_increase_ratio = (x_after / x_before) * 100 - 100
+    # 炎上前と炎上後の再生回数増加率
+    y_increase_ratio = (y_after / y_before) * 100 - 100
+    # 散布図プロット
+    ax.scatter(x_increase_ratio, y_increase_ratio,
+               c=color_list[i], label=label)
+    ax.legend(loc='upper left')
+    ax.set_xlabel('Subscriber increase [%]')
+    ax.set_ylabel('View increase [%]')
+    return x_increase_ratio, y_increase_ratio
+
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
     # 炎上前後39日ずつを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
                             before_period=AFTER_FLAMING, after_period=AFTER_FLAMING)
-    # 炎上日から分析対象日数(AFTER_FLAMING)後までの登録者数の増加率
-    subscribers_flaming_day = df_before['subscriber_count'].iloc[-1]
-    subscribers_after_flaming = df_after['subscriber_count'].iloc[-1]
-    subscriber_increase_ratio = (subscribers_after_flaming / subscribers_flaming_day) * 100 - 100
+    # 炎上前後の増加率を散布図プロット
+    subscriber_increase_ratio, view_increase_ratio \
+        = plot_increase_scatter(x_before=df_before['subscriber_norm'].iloc[-1], x_after=df_after['subscriber_norm'].iloc[-1],
+                                y_before=df_before['view_norm'].mean(), y_after=df_after['view_norm'].mean(), label=name, ax=ax)
     subscriber_increase_list.append(subscriber_increase_ratio)
-    # 炎上前と炎上後の再生回数増加率
-    views_before_flaming = df_before['view_count'].mean()
-    views_after_flaming = df_after['view_count'].mean()
-    view_increase_ratio = (views_after_flaming / views_before_flaming) * 100 - 100
     view_increase_list.append(view_increase_ratio)
-    # 散布図プロット
-    ax.scatter(subscriber_increase_ratio, view_increase_ratio,
-               c=color_list[i], label=name)
-    ax.legend(loc='upper left')
 xlim = ax.get_xlim()[1]
 ylim = ax.get_ylim()[1]
 ax.set_xlim(-xlim, xlim)
 ax.set_ylim(-ylim, ylim)
-ax.set_xlabel('Subscriber increase [%]')
-ax.set_ylabel('View increase [%]')
 ax.axvline(x=0, color='gray', alpha=0.2)
 ax.axhline(y=0, color='gray', alpha=0.2)
 
@@ -215,24 +221,14 @@ for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
     # 炎上前後39日ずつを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date - timedelta(days=AFTER_FLAMING),
                             before_period=AFTER_FLAMING, after_period=AFTER_FLAMING)
-    # 炎上日から分析対象日数(AFTER_FLAMING)後までの登録者数の増加率
-    subscribers_flaming_day = df_before['subscriber_count'].iloc[-1]
-    subscribers_after_flaming = df_after['subscriber_count'].iloc[-1]
-    subscriber_increase_ratio = (subscribers_after_flaming / subscribers_flaming_day) * 100 - 100
+    # 炎上前後の増加率を散布図プロット
+    subscriber_increase_ratio, view_increase_ratio \
+        = plot_increase_scatter(x_before=df_before['subscriber_norm'].iloc[-1], x_after=df_after['subscriber_norm'].iloc[-1],
+                          y_before=df_before['view_norm'].mean(), y_after=df_after['view_norm'].mean(), label=name, ax=ax)
     subscriber_increase_list.append(subscriber_increase_ratio)
-    # 炎上前と炎上後の再生回数増加率
-    views_before_flaming = df_before['view_count'].mean()
-    views_after_flaming = df_after['view_count'].mean()
-    view_increase_ratio = (views_after_flaming / views_before_flaming) * 100 - 100
     view_increase_list.append(view_increase_ratio)
-    # 散布図プロット
-    ax.scatter(subscriber_increase_ratio, view_increase_ratio,
-               c=color_list[i], label=name)
-    ax.legend(loc='upper left')
 ax.set_xlim(-xlim, xlim)
 ax.set_ylim(-ylim, ylim)
-ax.set_xlabel('Subscriber increase [%]')
-ax.set_ylabel('View increase [%]')
 ax.axvline(x=0, color='gray', alpha=0.2)
 ax.axhline(y=0, color='gray', alpha=0.2)
 
@@ -312,7 +308,8 @@ plt.tight_layout()
 # %% ARIMAモデルのp, qを推定し、モデル予測結果をプロット（登録者数）
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import arma_order_select_ic
-D = 2  # ARIMAモデルのパラメータd（階差の数）
+D_SUBSCRIBER = 2  # ARIMAモデルのパラメータd（階差の数）
+PQ_MAX_SUBSCRIBER = 2  # ARIMAモデルのパラメータpとqの最大値
 ALPHA = 0.05  # 区間予測の有意水準
 
 def optimize_arima_pq(x, d, p_max, q_max):
@@ -347,28 +344,219 @@ def plot_arima_predict(x, order, predict_start, predict_end, ax, alpha=None):
                         pred_ci.iloc[:, 0],
                         pred_ci.iloc[:, 1],
                         color='green', alpha=0.2)
+    return pred_mean
 
+def compare_pred_and_flaming(df_src, date_col, y_col, ax,
+                             flaming_date, before_period, after_period,
+                             d, p_max, q_max, alpha):
+    """ARIMAモデルで予測して炎上後の実データと比較プロットするメソッド"""
+    # 炎上前後データを抜き出し
+    df_before, df_after = devide_before_after(df_src, date_col, flaming_date,
+                            before_period=before_period, after_period=after_period)
+    # 時間がindexのSeriesを作成
+    x_series = df_before[[y_col, date_col]]
+    x_series = x_series.set_index(date_col)[y_col]
+    # パラメータpとqの推定
+    best_p, best_q= optimize_arima_pq(x=x_series,
+                                      d=d,
+                                      p_max=p_max,
+                                      q_max=q_max)
+    # 推定したパラメータでARIMAモデル作成し、予測結果をプロット
+    pred_mean = plot_arima_predict(x=x_series, order=(best_p, d, best_q),
+                                   predict_start=flaming_date, 
+                                   predict_end=flaming_date + timedelta(days=after_period-1),
+                                   ax=axes[i], alpha=alpha)
+    # 実際の炎上後の推移をプロット
+    ax.plot(df_after[date_col].values, df_after[y_col].values,
+                 label='after flaming', c='red')
+    ax.legend(loc='upper left')
+    ax.set_title(f'{y_col}_{name}')
+    ax.text(x_series.index.min(), ax.get_ylim()[0],
+            f'p={best_p}\nq={best_q}', verticalalignment='bottom', horizontalalignment='left')
+    return pred_mean
+
+pred_subscribers = {}  # 予測結果保持用
 fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロット用のaxes
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
-    # 炎上前後データを抜き出し
+    # ARIMAモデルで予測して炎上後の実データと比較プロット
+    pred_subscribers[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='subscriber_norm', ax=axes[i],
+                                    flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
+                                    d=D_SUBSCRIBER, p_max=PQ_MAX_SUBSCRIBER, q_max=PQ_MAX_SUBSCRIBER, alpha=ALPHA)
+plt.tight_layout()
+
+# %% ARIMAモデルのp, qを推定し、モデル予測結果をプロット（再生回数）
+D_VIEW = 1  # ARIMAモデルのパラメータd（階差の数）
+PQ_MAX_VIEW = 4  # ARIMAモデルのパラメータpとqの最大値
+pred_views = {}  # 予測結果保持用
+fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロット用のaxes
+# チャンネルごとにループ
+for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
+    pred_views[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='view_norm', ax=axes[i],
+                                flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
+                                d=D_VIEW, p_max=PQ_MAX_VIEW, q_max=PQ_MAX_VIEW, alpha=ALPHA)
+plt.tight_layout()
+
+# %% 登録者数と再生回数の予測値からの増加率
+fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # プロット用のaxes
+subscriber_increase_list = []  # 登録者数増加率格納用
+view_increase_list = []  # 再生回数増加率格納用
+# チャンネルごとにループ
+for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
+    # 炎上前後39日ずつを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
                             before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
-    # 時間がindexのSeriesを作成
-    x_series = df_before[['subscriber_norm', 'date']]
-    x_series = x_series.set_index('date')['subscriber_norm']
-    # パラメータpとqの推定
-    best_p, best_q= optimize_arima_pq(x=x_series,
-                                      d=D, p_max=4, q_max=4)
-    # 推定したパラメータでARIMAモデル作成し、予測結果をプロット
-    plot_arima_predict(x=x_series, order=(best_p, D, best_q),
-                       predict_start=flaming_date, 
-                       predict_end=flaming_date + timedelta(days=AFTER_FLAMING-1),
-                       ax=axes[i], alpha=ALPHA)
-    # 実際の炎上後の推移をプロット
-    axes[i].plot(df_after['date'].values, df_after['subscriber_norm'].values,
-                 label='after flaming', c='red')
-    axes[i].legend(loc='upper left')
-    axes[i].set_title(f'subscriber_{name}')
+    # 炎上後の予測値に対する増加率を散布図プロット 
+    subscriber_increase_ratio, view_increase_ratio \
+        = plot_increase_scatter(x_before=pred_subscribers[name].iloc[-1], x_after=df_after['subscriber_norm'].iloc[-1],
+                                y_before=pred_views[name].mean(), y_after=df_after['view_norm'].mean(), label=name, ax=ax)
+    subscriber_increase_list.append(subscriber_increase_ratio)
+    view_increase_list.append(view_increase_ratio)
+ax.set_xlim(-xlim, xlim)
+ax.set_ylim(-ylim, ylim)
+ax.axvline(x=0, color='gray', alpha=0.2)
+ax.axhline(y=0, color='gray', alpha=0.2)
+
+print(f'チャンネル登録者数増加率平均={np.mean(subscriber_increase_list)}%')
+print(f'再生回数数増加率平均={np.mean(view_increase_list)}%')
+
+# %% 登録者数・再生回数増加率と批評動画アップロード数の比較
+from seaborn_analyzer import regplot
+video_nums = df_criticizer.groupby('transferred_name')['critcizing_videos'].mean().to_numpy()
+regplot.linear_plot(video_nums, np.array(subscriber_increase_list), 
+                    x_colname='critcizing_videos', plot_scores=False)
+plt.ylabel('subscriber_increase_ratio')
+plt.show()
+regplot.linear_plot(video_nums, np.array(view_increase_list), 
+                    x_colname='critcizing_videos', plot_scores=False)
+plt.ylabel('view_increase_ratio')
+plt.show()
+
+# %% 1回のみアップロードしたユーザー
+df_one_criticizer = df[(df['classification']=='criticizer')
+                     & (df['critcizing_videos'] == 1)].copy()
+df_one_criticizer.loc[df_one_criticizer['view_count'] < 0, 'view_count'] = 0  # マイナス除外
+df_one_criticizer = df_one_criticizer.groupby('transferred_name').apply(
+                        lambda group: normalize_last_week(group, flaming_date))  # 炎上前週が100となるよう規格化
+n_channels = df_one_criticizer['transferred_name'].nunique()  # チャンネル数
+
+# 登録者数の予測
+pred_subscribers_one = {}  # 予測結果保持用
+fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロット用のaxes
+for i, (name, df_ch) in enumerate(df_one_criticizer.groupby('transferred_name')):
+    pred_subscribers_one[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='subscriber_norm', ax=axes[i],
+                                    flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
+                                    d=D_SUBSCRIBER, p_max=PQ_MAX_SUBSCRIBER, q_max=PQ_MAX_SUBSCRIBER, alpha=ALPHA)
 plt.tight_layout()
+plt.show()
+
+# 再生回数の予測
+pred_views_one = {}  # 予測結果保持用
+fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロット用のaxes
+for i, (name, df_ch) in enumerate(df_one_criticizer.groupby('transferred_name')):
+    pred_views_one[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='view_norm', ax=axes[i],
+                                flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
+                                d=D_VIEW, p_max=PQ_MAX_VIEW, q_max=PQ_MAX_VIEW, alpha=ALPHA)
+plt.tight_layout()
+plt.show()
+
+# 登録者数と再生回数の予測値からの増加率
+fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # プロット用のaxes
+subscriber_increase_list_one = []  # 登録者数増加率格納用
+view_increase_list_one = []  # 再生回数増加率格納用
+# チャンネルごとにループ
+for i, (name, df_ch) in enumerate(df_one_criticizer.groupby('transferred_name')):
+    # 炎上前後39日ずつを抜き出し
+    df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
+                            before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
+    # 炎上後の予測値に対する増加率を散布図プロット 
+    subscriber_increase_ratio, view_increase_ratio \
+        = plot_increase_scatter(x_before=pred_subscribers_one[name].iloc[-1], x_after=df_after['subscriber_norm'].iloc[-1],
+                                y_before=pred_views_one[name].mean(), y_after=df_after['view_norm'].mean(), label=name, ax=ax)
+    subscriber_increase_list_one.append(subscriber_increase_ratio)
+    view_increase_list_one.append(view_increase_ratio)
+ax.set_xlim(-xlim, xlim)
+ax.set_ylim(-ylim, ylim)
+ax.axvline(x=0, color='gray', alpha=0.2)
+ax.axhline(y=0, color='gray', alpha=0.2)
+print(f'チャンネル登録者数増加率平均={np.mean(subscriber_increase_list_one)}%')
+print(f'再生回数数増加率平均={np.mean(view_increase_list_one)}%')
+
+# %% 炎上とは無関係なビジネス系YouTuber
+df_business = df[df['classification']=='business'].copy()
+df_business.loc[df_business['view_count'] < 0, 'view_count'] = 0  # マイナス除外
+df_business = df_business.groupby('transferred_name').apply(
+                        lambda group: normalize_last_week(group, flaming_date))  # 炎上前週が100となるよう規格化
+n_channels = df_business['transferred_name'].nunique()  # チャンネル数
+
+# 登録者数の予測
+pred_subscribers_business = {}  # 予測結果保持用
+fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロット用のaxes
+for i, (name, df_ch) in enumerate(df_business.groupby('transferred_name')):
+    pred_subscribers_business[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='subscriber_norm', ax=axes[i],
+                                    flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
+                                    d=D_SUBSCRIBER, p_max=PQ_MAX_SUBSCRIBER, q_max=PQ_MAX_SUBSCRIBER, alpha=ALPHA)
+plt.tight_layout()
+plt.show()
+
+# 再生回数の予測
+pred_views_business = {}  # 予測結果保持用
+fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロット用のaxes
+for i, (name, df_ch) in enumerate(df_business.groupby('transferred_name')):
+    pred_views_business[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='view_norm', ax=axes[i],
+                                flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
+                                d=D_VIEW, p_max=PQ_MAX_VIEW, q_max=PQ_MAX_VIEW, alpha=ALPHA)
+plt.tight_layout()
+plt.show()
+
+# 登録者数と再生回数の予測値からの増加率
+fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # プロット用のaxes
+subscriber_increase_list_business = []  # 登録者数増加率格納用
+view_increase_list_business = []  # 再生回数増加率格納用
+# チャンネルごとにループ
+for i, (name, df_ch) in enumerate(df_business.groupby('transferred_name')):
+    # 炎上前後39日ずつを抜き出し
+    df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
+                            before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
+    # 炎上後の予測値に対する増加率を散布図プロット 
+    subscriber_increase_ratio, view_increase_ratio \
+        = plot_increase_scatter(x_before=pred_subscribers_business[name].iloc[-1], x_after=df_after['subscriber_norm'].iloc[-1],
+                                y_before=pred_views_business[name].mean(), y_after=df_after['view_norm'].mean(), label=name, ax=ax)
+    subscriber_increase_list_business.append(subscriber_increase_ratio)
+    view_increase_list_business.append(view_increase_ratio)
+ax.set_xlim(-xlim, xlim)
+ax.set_ylim(-ylim, ylim)
+ax.axvline(x=0, color='gray', alpha=0.2)
+ax.axhline(y=0, color='gray', alpha=0.2)
+print(f'チャンネル登録者数増加率平均={np.mean(subscriber_increase_list_business)}%')
+print(f'再生回数数増加率平均={np.mean(view_increase_list_business)}%')
+
+# %% 批評者、1回のみ炎上関係動画アップ、炎上と無関係なビジネス系YouTuberを比較
+fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # プロット用のaxes
+ax.scatter(subscriber_increase_list_business, view_increase_list_business, 
+           c='dodgerblue', label='business')
+ax.scatter(subscriber_increase_list_one, view_increase_list_one, 
+           c='orange', label='one_criticizer')
+ax.scatter(subscriber_increase_list, view_increase_list, 
+           c='tab:red', label='criticizer')
+ax.legend()
+ax.set_xlim(-xlim, xlim)
+ax.set_ylim(-ylim, ylim)
+ax.axvline(x=0, color='gray', alpha=0.2)
+ax.axhline(y=0, color='gray', alpha=0.2)
+
+# %% マハラノビス距離算出
+from scipy.spatial import distance
+X_criticizer = np.array([subscriber_increase_list, view_increase_list]).T  # 批評者データ
+X_normal = np.array([subscriber_increase_list_business, view_increase_list_business]).T  # ビジネス系YouTuberを正常データとして利用
+mean = np.mean(X_normal, axis=0)  # 平均
+cov = np.cov(X_normal.T)  # 分散共分散行列
+cov_i = np.linalg.pinv(cov)  # 分散共分散逆行列
+# マハラノビス距離
+mahalanobis_dist = np.apply_along_axis(lambda x:
+        distance.mahalanobis(x, mean, cov_i), 1, X_criticizer)
+mahalanobis_dist = pd.Series(mahalanobis_dist, 
+        index=list(df_criticizer.groupby('transferred_name').groups.keys()))
+print(mahalanobis_dist)
+
 # %%
