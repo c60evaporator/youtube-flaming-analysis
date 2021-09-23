@@ -567,11 +567,13 @@ ax.scatter(subscriber_increase_list_one, view_increase_list_one,
            c='orange', label='one_criticizer')
 ax.scatter(subscriber_increase_list, view_increase_list, 
            c='tab:red', label='criticizer')
-ax.legend()
+ax.legend(loc='upper left')
 ax.set_xlim(-xlim, xlim)
 ax.set_ylim(-ylim, ylim)
 ax.axvline(x=0, color='gray', alpha=0.2)
 ax.axhline(y=0, color='gray', alpha=0.2)
+ax.set_xlabel('Subscriber increase [%]')
+ax.set_ylabel('View increase [%]')
 
 # %% マハラノビス距離算出
 from scipy.spatial import distance
