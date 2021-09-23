@@ -193,7 +193,7 @@ def plot_increase_scatter(x_before, x_after, y_before, y_after, label, ax):
 
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
-    # 炎上前後39日ずつを抜き出し
+    # 炎上前後40日ずつを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
                             before_period=AFTER_FLAMING, after_period=AFTER_FLAMING)
     # 炎上前後の増加率を散布図プロット
@@ -218,7 +218,7 @@ subscriber_increase_list = []  # 登録者数増加率格納用
 view_increase_list = []  # 再生回数増加率格納用
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
-    # 炎上前後39日ずつを抜き出し
+    # 炎上前後40日ずつを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date - timedelta(days=AFTER_FLAMING),
                             before_period=AFTER_FLAMING, after_period=AFTER_FLAMING)
     # 炎上前後の増加率を散布図プロット
@@ -309,7 +309,8 @@ plt.tight_layout()
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import arma_order_select_ic
 D_SUBSCRIBER = 2  # ARIMAモデルのパラメータd（階差の数）
-PQ_MAX_SUBSCRIBER = 2  # ARIMAモデルのパラメータpとqの最大値
+P_MAX_SUBSCRIBER = 4  # ARIMAモデルのパラメータpの最大値
+Q_MAX_SUBSCRIBER = 2  # ARIMAモデルのパラメータqの最大値
 ALPHA = 0.05  # 区間予測の有意水準
 
 def optimize_arima_pq(x, d, p_max, q_max):
@@ -365,7 +366,7 @@ def compare_pred_and_flaming(df_src, date_col, y_col, ax,
     pred_mean = plot_arima_predict(x=x_series, order=(best_p, d, best_q),
                                    predict_start=flaming_date, 
                                    predict_end=flaming_date + timedelta(days=after_period-1),
-                                   ax=axes[i], alpha=alpha)
+                                   ax=ax, alpha=alpha)
     # 実際の炎上後の推移をプロット
     ax.plot(df_after[date_col].values, df_after[y_col].values,
                  label='after flaming', c='red')
@@ -382,19 +383,20 @@ for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
     # ARIMAモデルで予測して炎上後の実データと比較プロット
     pred_subscribers[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='subscriber_norm', ax=axes[i],
                                     flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
-                                    d=D_SUBSCRIBER, p_max=PQ_MAX_SUBSCRIBER, q_max=PQ_MAX_SUBSCRIBER, alpha=ALPHA)
+                                    d=D_SUBSCRIBER, p_max=P_MAX_SUBSCRIBER, q_max=Q_MAX_SUBSCRIBER, alpha=ALPHA)
 plt.tight_layout()
 
 # %% ARIMAモデルのp, qを推定し、モデル予測結果をプロット（再生回数）
 D_VIEW = 1  # ARIMAモデルのパラメータd（階差の数）
-PQ_MAX_VIEW = 4  # ARIMAモデルのパラメータpとqの最大値
+P_MAX_VIEW = 4  # ARIMAモデルのパラメータpの最大値
+Q_MAX_VIEW = 4  # ARIMAモデルのパラメータpの最大値
 pred_views = {}  # 予測結果保持用
 fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロット用のaxes
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
     pred_views[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='view_norm', ax=axes[i],
                                 flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
-                                d=D_VIEW, p_max=PQ_MAX_VIEW, q_max=PQ_MAX_VIEW, alpha=ALPHA)
+                                d=D_VIEW, p_max=P_MAX_VIEW, q_max=Q_MAX_VIEW, alpha=ALPHA)
 plt.tight_layout()
 
 # %% 登録者数と再生回数の予測値からの増加率
@@ -403,7 +405,7 @@ subscriber_increase_list = []  # 登録者数増加率格納用
 view_increase_list = []  # 再生回数増加率格納用
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
-    # 炎上前後39日ずつを抜き出し
+    # 炎上前後40日ずつを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
                             before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
     # 炎上後の予測値に対する増加率を散布図プロット 
@@ -446,7 +448,7 @@ fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロッ�
 for i, (name, df_ch) in enumerate(df_one_criticizer.groupby('transferred_name')):
     pred_subscribers_one[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='subscriber_norm', ax=axes[i],
                                     flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
-                                    d=D_SUBSCRIBER, p_max=PQ_MAX_SUBSCRIBER, q_max=PQ_MAX_SUBSCRIBER, alpha=ALPHA)
+                                    d=D_SUBSCRIBER, p_max=P_MAX_SUBSCRIBER, q_max=Q_MAX_SUBSCRIBER, alpha=ALPHA)
 plt.tight_layout()
 plt.show()
 
@@ -456,7 +458,7 @@ fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロッ�
 for i, (name, df_ch) in enumerate(df_one_criticizer.groupby('transferred_name')):
     pred_views_one[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='view_norm', ax=axes[i],
                                 flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
-                                d=D_VIEW, p_max=PQ_MAX_VIEW, q_max=PQ_MAX_VIEW, alpha=ALPHA)
+                                d=D_VIEW, p_max=P_MAX_VIEW, q_max=Q_MAX_VIEW, alpha=ALPHA)
 plt.tight_layout()
 plt.show()
 
@@ -466,7 +468,7 @@ subscriber_increase_list_one = []  # 登録者数増加率格納用
 view_increase_list_one = []  # 再生回数増加率格納用
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_one_criticizer.groupby('transferred_name')):
-    # 炎上前後39日ずつを抜き出し
+    # 炎上前後40日ずつを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
                             before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
     # 炎上後の予測値に対する増加率を散布図プロット 
@@ -495,7 +497,7 @@ fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロッ�
 for i, (name, df_ch) in enumerate(df_business.groupby('transferred_name')):
     pred_subscribers_business[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='subscriber_norm', ax=axes[i],
                                     flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
-                                    d=D_SUBSCRIBER, p_max=PQ_MAX_SUBSCRIBER, q_max=PQ_MAX_SUBSCRIBER, alpha=ALPHA)
+                                    d=D_SUBSCRIBER, p_max=P_MAX_SUBSCRIBER, q_max=Q_MAX_SUBSCRIBER, alpha=ALPHA)
 plt.tight_layout()
 plt.show()
 
@@ -505,7 +507,7 @@ fig, axes = plt.subplots(n_channels, 1, figsize=(8, n_channels*3))  # プロッ�
 for i, (name, df_ch) in enumerate(df_business.groupby('transferred_name')):
     pred_views_business[name] = compare_pred_and_flaming(df_src=df_ch, date_col='date', y_col='view_norm', ax=axes[i],
                                 flaming_date=flaming_date, before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING,
-                                d=D_VIEW, p_max=PQ_MAX_VIEW, q_max=PQ_MAX_VIEW, alpha=ALPHA)
+                                d=D_VIEW, p_max=P_MAX_VIEW, q_max=Q_MAX_VIEW, alpha=ALPHA)
 plt.tight_layout()
 plt.show()
 
@@ -515,7 +517,7 @@ subscriber_increase_list_business = []  # 登録者数増加率格納用
 view_increase_list_business = []  # 再生回数増加率格納用
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_business.groupby('transferred_name')):
-    # 炎上前後39日ずつを抜き出し
+    # 炎上前後40日ずつを抜き出し
     df_before, df_after = devide_before_after(df_ch, 'date', flaming_date,
                             before_period=BEFORE_FLAMING, after_period=AFTER_FLAMING)
     # 炎上後の予測値に対する増加率を散布図プロット 
