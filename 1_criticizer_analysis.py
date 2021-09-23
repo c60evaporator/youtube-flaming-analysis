@@ -89,14 +89,33 @@ axes[1].text(flaming_date, axes[1].get_ylim()[0],
             f'Flaming date = {flaming_date.strftime("%Y/%m/%d")}', verticalalignment='bottom', horizontalalignment='left')
 
 # %% 視聴回数がマイナスのデータをゼロにして再プロット
-df_criticizer.loc[df_criticizer['view_count'] < 0, 'view_count'] = 0
+def modify_minus_view(df_ch, y_col, date_col):
+    """視聴回数がマイナスのデータをゼロに＆30日以内に通常の10倍以上のデータがあれば補正"""
+    minus_idx = df_ch[df_ch[y_col] < 0].index  # 視聴回数がマイナスのインデックス
+    df_ch.loc[minus_idx, y_col] = 0  # 視聴回数がマイナスのデータをゼロに補正
+    for idx in minus_idx:
+        minus_date = df_ch[date_col].at[idx].to_pydatetime()
+        # マイナスから30日以内のメディアン
+        median_minus_month = df_ch[(df_ch[date_col] > minus_date)
+                & (df_ch[date_col] <= minus_date + timedelta(days=30))
+                ][y_col].median()
+        # マイナスから30日以内で視聴回数が
+        df_ch.loc[(df_ch[date_col] > minus_date)
+                & (df_ch[date_col] <= minus_date + timedelta(days=30))
+                & (df_ch[y_col] > median_minus_month * 10),
+                y_col] = median_minus_month
+    return df_ch
+# 視聴回数がマイナスのデータ＆直後の異常データを補正
+df_criticizer = df_criticizer.groupby('transferred_name').apply(
+                    lambda group: modify_minus_view(group, 'view_count', 'date'))
+# 炎上前週を100として登録者数と再生回数を正規化
+df_criticizer = df_criticizer.groupby('transferred_name').apply(
+                    lambda group: normalize_last_week(group, flaming_date))
 
 # プロット用のaxes
 fig, axes = plt.subplots(2, 1, figsize=(12, 12))
 # チャンネルごとにループ
 for i, (name, df_ch) in enumerate(df_criticizer.groupby('transferred_name')):
-    # 炎上前週を100として登録者数と再生回数を正規化
-    df_ch = normalize_last_week(df_ch, flaming_date=flaming_date)
     # 正規化したチャンネル登録者数をプロット
     plot_before_after(ax=axes[0], df_src=df_ch,
                       date_col='date', y_col='subscriber_norm', flaming_date=flaming_date,
@@ -116,8 +135,6 @@ axes[1].text(flaming_date, axes[1].get_ylim()[0],
 
 # %% 視聴回数のスペクトル解析
 import numpy as np
-# 炎上前週を100として登録者数と再生回数を正規化
-df_criticizer = df_criticizer.groupby('transferred_name').apply(lambda group: normalize_last_week(group, flaming_date))
 # 全チャンネルで日ごとに平均をとる
 view_counts_mean = df_criticizer.groupby('date')['view_norm'].mean().values
 # ハミング関数で両端を滑らかに
@@ -319,6 +336,9 @@ def optimize_arima_pq(x, d, p_max, q_max):
     for i in range(d):  # d回差分をとる
         diff = diff.diff()
     diff = diff.dropna()  # nanを削除
+    # diffが全て0なら、p=0, q=0を返す
+    if diff.nunique() == 1 and diff.iat[0] == 0:
+        return 0, 0
     # ARMAのパラメータ推定
     res = arma_order_select_ic(diff, ic='aic', trend='nc',
                                max_ar=p_max, max_ma=q_max)
@@ -437,9 +457,12 @@ plt.show()
 # %% 1回のみアップロードしたユーザー
 df_one_criticizer = df[(df['classification']=='criticizer')
                      & (df['critcizing_videos'] == 1)].copy()
-df_one_criticizer.loc[df_one_criticizer['view_count'] < 0, 'view_count'] = 0  # マイナス除外
+# 視聴回数がマイナスのデータ＆直後の異常データを補正
 df_one_criticizer = df_one_criticizer.groupby('transferred_name').apply(
-                        lambda group: normalize_last_week(group, flaming_date))  # 炎上前週が100となるよう規格化
+                    lambda group: modify_minus_view(group, 'view_count', 'date'))
+# 炎上前週が100となるよう規格化
+df_one_criticizer = df_one_criticizer.groupby('transferred_name').apply(
+                        lambda group: normalize_last_week(group, flaming_date))
 n_channels = df_one_criticizer['transferred_name'].nunique()  # チャンネル数
 
 # 登録者数の予測
@@ -486,9 +509,12 @@ print(f'再生回数数増加率平均={np.mean(view_increase_list_one)}%')
 
 # %% 炎上とは無関係なビジネス系YouTuber
 df_business = df[df['classification']=='business'].copy()
-df_business.loc[df_business['view_count'] < 0, 'view_count'] = 0  # マイナス除外
+# 視聴回数がマイナスのデータ＆直後の異常データを補正
 df_business = df_business.groupby('transferred_name').apply(
-                        lambda group: normalize_last_week(group, flaming_date))  # 炎上前週が100となるよう規格化
+                    lambda group: modify_minus_view(group, 'view_count', 'date'))
+# 炎上前週が100となるよう規格化
+df_business = df_business.groupby('transferred_name').apply(
+                        lambda group: normalize_last_week(group, flaming_date))
 n_channels = df_business['transferred_name'].nunique()  # チャンネル数
 
 # 登録者数の予測
