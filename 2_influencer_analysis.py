@@ -18,9 +18,9 @@ BEFORE_FLAMING = 84  # 炎上前の分析対象日数
 D_SUBSCRIBER = 2  # 登録者数ARIMAモデルのパラメータd
 P_MAX_SUBSCRIBER = 4  # 登録者数ARIMAモデルのパラメータpの最大値
 Q_MAX_SUBSCRIBER = 2  # 登録者数ARIMAモデルのパラメータqの最大値
-D_VIEW = 1  # 視聴者数ARIMAモデルのパラメータd
-P_MAX_VIEW = 4  # 視聴者数ARIMAモデルのパラメータpの最大値
-Q_MAX_VIEW = 4  # 視聴者数ARIMAモデルのパラメータpの最大値
+D_VIEW = 1  # 再生回数ARIMAモデルのパラメータd
+P_MAX_VIEW = 4  # 再生回数ARIMAモデルのパラメータpの最大値
+Q_MAX_VIEW = 4  # 再生回数ARIMAモデルのパラメータpの最大値
 ALPHA = 0.05  # 区間予測の有意水準
 # データの読込
 df_channels = pd.read_csv('./channel_ids.csv', encoding='utf_8_sig', parse_dates=['flaming_date'])
@@ -69,16 +69,16 @@ def normalize_last_week(df_src, flaming_date):
     return df_src
 
 def modify_minus_view(df_ch, y_col, date_col):
-    """視聴回数がマイナスのデータをゼロに＆30日以内に通常の10倍以上のデータがあれば補正"""
-    minus_idx = df_ch[df_ch[y_col] < 0].index  # 視聴回数がマイナスのインデックス
-    df_ch.loc[minus_idx, y_col] = 0  # 視聴回数がマイナスのデータをゼロに補正
+    """再生回数がマイナスのデータをゼロに＆30日以内に通常の10倍以上のデータがあれば補正"""
+    minus_idx = df_ch[df_ch[y_col] < 0].index  # 再生回数がマイナスのインデックス
+    df_ch.loc[minus_idx, y_col] = 0  # 再生回数がマイナスのデータをゼロに補正
     for idx in minus_idx:
         minus_date = df_ch[date_col].at[idx].to_pydatetime()
-        # マイナスから30日以内のメディアン
+        # マイナスから30日以内の中央値
         median_minus_month = df_ch[(df_ch[date_col] > minus_date)
                 & (df_ch[date_col] <= minus_date + timedelta(days=30))
                 ][y_col].median()
-        # マイナスから30日以内で視聴回数が
+        # マイナスから30日以内で再生回数が中央値の10倍を超えたら中央値で補正
         df_ch.loc[(df_ch[date_col] > minus_date)
                 & (df_ch[date_col] <= minus_date + timedelta(days=30))
                 & (df_ch[y_col] > median_minus_month * 10),
@@ -192,7 +192,7 @@ def compare_pred_and_flaming(df_src, date_col, y_col, ax,
 # %% 分析対象インフルエンサーの可視化
 flaming_date = df[df['transferred_name']=='influencer']['flaming_date'][0].to_pydatetime()# 炎上日
 df_influencer = df[df['classification']=='influencer_main'].copy()
-# 視聴回数がマイナスのデータ＆直後の異常データを補正
+# 再生回数がマイナスのデータ＆直後の異常データを補正
 df_influencer = df_influencer.groupby('transferred_name').apply(
                     lambda group: modify_minus_view(group, 'view_count', 'date'))
 # 炎上前週が100となるよう規格化
@@ -266,7 +266,7 @@ print(f'再生回数数増加率平均={np.mean(view_increase_list_influencer)}%
 # %% 批評者との比較
 df_criticizer = df[(df['classification']=='criticizer')
                 & (df['critcizing_videos'] >= 2)].copy()
-# 視聴回数がマイナスのデータ＆直後の異常データを補正
+# 再生回数がマイナスのデータ＆直後の異常データを補正
 df_criticizer = df_criticizer.groupby('transferred_name').apply(
                     lambda group: modify_minus_view(group, 'view_count', 'date'))
 # 炎上前週が100となるよう規格化
@@ -332,7 +332,7 @@ plt.show()
 
 # %% その他の炎上したビジネス系インフルエンサー
 df_other = df[df['classification']=='influencer_other'].copy()
-# 視聴回数がマイナスのデータ＆直後の異常データを補正
+# 再生回数がマイナスのデータ＆直後の異常データを補正
 df_other = df_other.groupby('transferred_name').apply(
                     lambda group: modify_minus_view(group, 'view_count', 'date'))
 # 炎上前週が100となるよう規格化
@@ -387,7 +387,7 @@ print(f'再生回数数増加率平均={np.mean(view_increase_list_other)}%')
 
 # %% 泥酔事件インフルエンサー
 df_drunk = df[df['classification']=='influencer_drunk'].copy()
-# 視聴回数がマイナスのデータ＆直後の異常データを補正
+# 再生回数がマイナスのデータ＆直後の異常データを補正
 df_drunk = df_drunk.groupby('transferred_name').apply(
                     lambda group: modify_minus_view(group, 'view_count', 'date'))
 # 炎上前週が100となるよう規格化

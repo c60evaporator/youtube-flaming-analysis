@@ -13,7 +13,7 @@ df_channels = pd.read_csv('./channel_ids.csv', encoding='utf_8_sig', parse_dates
 df_noxinfluencer = pd.read_csv(NOX_CSV_PATH, encoding='utf_8_sig', parse_dates=['date', 'acquisition_date'])
 # 読み込んだデータを結合
 df = pd.merge(df_noxinfluencer, df_channels, how='left', left_on='channel_name', right_on='name').drop(columns=['name'])
-# 2動画以上アップロードしたチャンネルに絞る
+# 2動画以上アップロードした批評者チャンネルに絞る
 df_criticizer = df[(df['classification']=='criticizer')
                 & (df['critcizing_videos'] >= 2)].copy()
 print(df_criticizer.shape)
@@ -88,24 +88,24 @@ axes[0].text(flaming_date, axes[0].get_ylim()[0],
 axes[1].text(flaming_date, axes[1].get_ylim()[0],
             f'Flaming date = {flaming_date.strftime("%Y/%m/%d")}', verticalalignment='bottom', horizontalalignment='left')
 
-# %% 視聴回数がマイナスのデータをゼロにして再プロット
+# %% 再生回数がマイナスのデータをゼロにして再プロット
 def modify_minus_view(df_ch, y_col, date_col):
-    """視聴回数がマイナスのデータをゼロに＆30日以内に通常の10倍以上のデータがあれば補正"""
-    minus_idx = df_ch[df_ch[y_col] < 0].index  # 視聴回数がマイナスのインデックス
-    df_ch.loc[minus_idx, y_col] = 0  # 視聴回数がマイナスのデータをゼロに補正
+    """再生回数がマイナスのデータをゼロに＆30日以内に通常の10倍以上のデータがあれば補正"""
+    minus_idx = df_ch[df_ch[y_col] < 0].index  # 再生回数がマイナスのインデックス
+    df_ch.loc[minus_idx, y_col] = 0  # 再生回数がマイナスのデータをゼロに補正
     for idx in minus_idx:
         minus_date = df_ch[date_col].at[idx].to_pydatetime()
-        # マイナスから30日以内のメディアン
+        # マイナスから30日以内の中央値
         median_minus_month = df_ch[(df_ch[date_col] > minus_date)
                 & (df_ch[date_col] <= minus_date + timedelta(days=30))
                 ][y_col].median()
-        # マイナスから30日以内で視聴回数が
+        # マイナスから30日以内で再生回数が中央値の10倍を超えたら中央値で補正
         df_ch.loc[(df_ch[date_col] > minus_date)
                 & (df_ch[date_col] <= minus_date + timedelta(days=30))
                 & (df_ch[y_col] > median_minus_month * 10),
                 y_col] = median_minus_month
     return df_ch
-# 視聴回数がマイナスのデータ＆直後の異常データを補正
+# 再生回数がマイナスのデータ＆直後の異常データを補正
 df_criticizer = df_criticizer.groupby('transferred_name').apply(
                     lambda group: modify_minus_view(group, 'view_count', 'date'))
 # 炎上前週を100として登録者数と再生回数を正規化
@@ -133,7 +133,7 @@ axes[1].text(flaming_date, axes[1].get_ylim()[0],
             f'Flaming date = {flaming_date.strftime("%Y/%m/%d")}', verticalalignment='bottom', horizontalalignment='left')
 
 
-# %% 視聴回数のスペクトル解析
+# %% 再生回数のスペクトル解析
 import numpy as np
 # 全チャンネルで日ごとに平均をとる
 view_counts_mean = df_criticizer.groupby('date')['view_norm'].mean().values
@@ -276,25 +276,25 @@ def plot_diff_acf(x, lags, axes_diff, axes_acf, name):
     """差分の自己相関コレログラム描画用メソッド"""
     # 階差1のデータプロット
     axes_diff[0].plot(np.diff(x))
-    axes_diff[0].set_title(f'1st_order_correlation_{name}')
+    axes_diff[0].set_title(f'1st_order_{name}')
     # 階差1の自己相関コレログラム
     plot_acf(np.diff(x),
              lags=lags, ax=axes_acf[0],
-             title=f'1st_order_{name}')
+             title=f'1st_order_correlation_{name}')
     # 階差2のデータプロット
     axes_diff[1].plot(np.diff(np.diff(x)))
-    axes_diff[1].set_title(f'2nd_order_correlation_{name}')
+    axes_diff[1].set_title(f'2nd_order_{name}')
     # 階差2の自己相関コレログラム
     plot_acf(np.diff(np.diff(x)),
              lags=lags, ax=axes_acf[1],
-             title=f'2nd_order_{name}')
+             title=f'2nd_order_correlation_{name}')
     # 階差3のデータプロット
     axes_diff[2].plot(np.diff(np.diff(np.diff(x))))
-    axes_diff[2].set_title(f'3rd_order_correlation_{name}')
+    axes_diff[2].set_title(f'3rd_order_{name}')
     # 階差3の自己相関コレログラム
     plot_acf(np.diff(np.diff(np.diff(x))),
              lags=lags, ax=axes_acf[2],
-             title=f'3rd_order_{name}')
+             title=f'3rd_order_correlation_{name}')
 
 fig, axes = plt.subplots(n_channels * 2, 3, figsize=(18, n_channels*6))  # プロット用のaxes
 # チャンネルごとにループ
@@ -454,10 +454,10 @@ regplot.linear_plot(video_nums, np.array(view_increase_list),
 plt.ylabel('view_increase_ratio')
 plt.show()
 
-# %% 1回のみアップロードしたユーザー
+# %% 1回のみ炎上関連動画をアップロードしたユーザー
 df_one_criticizer = df[(df['classification']=='criticizer')
                      & (df['critcizing_videos'] == 1)].copy()
-# 視聴回数がマイナスのデータ＆直後の異常データを補正
+# 再生回数がマイナスのデータ＆直後の異常データを補正
 df_one_criticizer = df_one_criticizer.groupby('transferred_name').apply(
                     lambda group: modify_minus_view(group, 'view_count', 'date'))
 # 炎上前週が100となるよう規格化
@@ -509,7 +509,7 @@ print(f'再生回数数増加率平均={np.mean(view_increase_list_one)}%')
 
 # %% 炎上とは無関係なビジネス系YouTuber
 df_business = df[df['classification']=='business'].copy()
-# 視聴回数がマイナスのデータ＆直後の異常データを補正
+# 再生回数がマイナスのデータ＆直後の異常データを補正
 df_business = df_business.groupby('transferred_name').apply(
                     lambda group: modify_minus_view(group, 'view_count', 'date'))
 # 炎上前週が100となるよう規格化
