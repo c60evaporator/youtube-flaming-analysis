@@ -191,6 +191,7 @@ def compare_pred_and_flaming(df_src, date_col, y_col, ax,
 
 # %% 分析対象インフルエンサーの可視化
 flaming_date = df[df['transferred_name']=='influencer']['flaming_date'][0].to_pydatetime()# 炎上日
+# インフルエンサーのデータ読込
 df_influencer = df[df['classification']=='influencer_main'].copy()
 # 再生回数がマイナスのデータ＆直後の異常データを補正
 df_influencer = df_influencer.groupby('transferred_name').apply(
@@ -462,8 +463,6 @@ ax.set_ylabel('View increase [%]')
 plt.show()
 subscriber_increase_list_all = subscriber_increase_list_influencer + subscriber_increase_list_other + subscriber_increase_list_drunk
 view_increase_list_all = view_increase_list_influencer + view_increase_list_other + view_increase_list_drunk
-print(f'チャンネル登録者数増加率平均={np.mean(subscriber_increase_list_all)}%')
-print(f'再生回数数増加率平均={np.mean(view_increase_list_all)}%')
 print(f'登録者減少チャンネル数={len([v for v in subscriber_increase_list_all if v <= 0])}/{len(subscriber_increase_list_all)}')
 print(f'再生回数減少チャンネル数={len([v for v in view_increase_list_all if v <= 0])}/{len(view_increase_list_all)}')
 
