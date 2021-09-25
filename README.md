@@ -3,7 +3,7 @@ Data analysis scripts of YouTube flaming.
 
 ![compare_criticizer_influencer_2_eng](https://user-images.githubusercontent.com/59557625/134766794-37825517-432b-481c-bd69-e9cecd72698e.png)
 
-![criticizer_correlation_eng](https://user-images.githubusercontent.com/59557625/134766828-55e7fe16-ef84-4511-a401-29aef0763bf5.png)
+![image](https://user-images.githubusercontent.com/59557625/134788120-b263c9e7-5a9c-48b7-b592-6488ebeae1f2.png)
 
 # Contact
 If you have any questions or comments about the scripts,
