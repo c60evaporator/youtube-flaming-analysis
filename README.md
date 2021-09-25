@@ -12,7 +12,7 @@ Twitter: https://twitter.com/c60evaporator
 
 # 概要
 YouTube炎上事例の分析スクリプトです。
-詳細は[こちらのQiita記事]()を参照ください。
+詳細は[こちらのQiita記事](https://qiita.com/c60evaporator/items/bf9d5ad2d13876a670cf)を参照ください。
 
 本記事に対する問い合わせは、[私のTwitter](https://twitter.com/c60evaporator)までお願い致します。
 （channel_ids.csvやNoxInfluencer取得データが欲しい方も上記Twitterまでご連絡ください）
