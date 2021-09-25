@@ -16,3 +16,13 @@ YouTube炎上事例の分析スクリプトです。
 
 本記事に対する問い合わせは、[私のTwitter](https://twitter.com/c60evaporator)までお願い致します。
 （channel_ids.csvやNoxInfluencer取得データが欲しい方も上記Twitterまでご連絡ください）
+
+## モジュール構成
+
+|Module name|内容|Content|
+|---|---|---|
+|1_criticizer_analysis.py|批評者側の分析|Analysis of criticizer|
+|2_influencer_analysis.py|インフルエンサー側の分析|Analysis of flamer|
+|get_noxinfluencer_data.py|NoxInfluencerのデータ取得スクリプト|Getting data of NoxInfluencer|
+|retrieve_youtube_data.py|YouTube APIによるデータ取得スクリプト|Getting data with YouTube API|
+|get_youtube_data.py|YouTube APIでデータ取得するためのメソッド集|Methods of getting data with YouTbe API|
