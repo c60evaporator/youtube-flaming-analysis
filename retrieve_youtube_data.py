@@ -9,7 +9,7 @@ from get_youtube_data import *
 cfg, channel_ids = read_config()
 API_KEY = cfg['APIKeys']['YoutubeAPIKey']  # APIキー
 CHANNEL_IDS = channel_ids['channel_id'].values.tolist()  # インフルエンサーのチャンネルIDのリスト
-CSV_PATH = f'{cfg["Path"]["NoxInfluencerOutput"]}\\youtube_status_history.csv'  # 出力先のパス
+CSV_PATH = f'{cfg["Path"]["CSVOutput"]}\\youtube_stats_summary.csv'  # 出力先のパス
 
 # チャンネル登録者数・再生数を取得
 start_date = datetime.today()
